@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Троичный поиск</title>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/3320/3320938.png" type="image/png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cascadia+Mono:ital,wght@0,200..700;1,200..700&family=Ubuntu+Sans+Mono:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Алгоритм троичного поиска</h1>
+
+        <div class="controls">
+            <label>Тип функции:
+                <select id="funcType">
+                    <option value="max">Функция с максимумом</option>
+                    <option value="min">Функция с минимумом</option>
+                </select>
+            </label>
+
+            <label>Левая граница l:
+                <input type="number" id="left" value="-15">
+            </label>
+
+            <label>Правая граница r:
+                <input type="number" id="right" value="15">
+            </label>
+
+            <label>Точность ε:
+                <input type="number" id="eps" value="0.1" step="0.01">
+            </label>
+
+            <button onclick="handleButtonClick()">Запустить</button>
+        </div>
+
+    <canvas id="canvas" width="1000" height="525"></canvas>
+
+    <div class="info">
+        <p id="stepInfo">Ожидание запуска алгоритма...</p>
+        <p id="result">   </p>
+    </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
