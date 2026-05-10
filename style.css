@@ -24,7 +24,7 @@ body::before {
 }
 
 .container {
-  width: 1100px;
+  width: 1200px;
   height: 88vh;
   padding: 30px;
   background: white;
@@ -34,8 +34,9 @@ body::before {
 
 .controls {
   display: flex;
-  gap: 40px;
+  gap: 30px;
   justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
   margin: 20px auto;
 }
@@ -43,6 +44,8 @@ body::before {
 label {
   display: flex;
   flex-direction: column;
+  justify-content: center;
+  align-items: center;
   font-size: 16px;
   gap: 2px;
 }
@@ -50,14 +53,25 @@ label {
 input, select {
   padding: 6px;
   margin-top: 5px;
-  width: 180px;
+  height: 20px;
+  width: 80px;
+  font-family: "Cascadia Mono", sans-serif;
   font-size: 14px;
   border: 1px solid #ccc;
   border-radius: 5px;
 }
 
+#funcType {
+  width: 100px;
+  height: 33px;
+}
+
+#funcInput {
+  width: 250px;
+}
+
 button {
-  padding: 6px 25px;
+  padding: 10px 25px;
   background: #674caa;
   color: white;
   border: none;
@@ -66,8 +80,12 @@ button {
   font-size: 16px;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #533e8a;
+}
+
+button:disabled {
+  cursor: auto;
 }
 
 canvas {

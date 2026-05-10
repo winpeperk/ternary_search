@@ -1,6 +1,8 @@
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+
 const funcTypeInput = document.getElementById("funcType");
+const funcInput = document.getElementById("funcInput");
 const leftInput = document.getElementById("left");
 const rightInput = document.getElementById("right");
 const epsInput = document.getElementById("eps");
@@ -12,12 +14,94 @@ let algorithmRunning = false;
 let steps = [];
 let currentStep = 0;
 let timer = null;
+let userFunction = null;
+
+function validateInputs() {
+    const l = Number(leftInput.value);
+    const r = Number(rightInput.value);
+    const eps = Number(epsInput.value);
+
+    if (!Number.isFinite(l) || !Number.isFinite(r) || !Number.isFinite(eps) || l >= r || eps <= 0) {
+        stepInfo.textContent = "Проверьте границы интервала и точность.";
+        result.textContent = "";
+        startButton.disabled = true;
+        return false;
+    }
+
+    if (!createUserFunction()) {
+        startButton.disabled = true;
+        return false;
+    }
+
+    if (!checkUnimodality(l, r)) {
+        stepInfo.textContent = "Функция не является унимодальной на заданном интервале.";
+        result.textContent = "Измените функцию или границы интервала.";
+        startButton.disabled = true;
+        return false;
+    }
+
+    stepInfo.textContent = "Ожидание запуска алгоритма...";
+    result.textContent = "";
+    startButton.disabled = false;
+    return true;
+}
+
+function createUserFunction() {
+    try {
+        userFunction = new Function("x", `return ${funcInput.value};`);
+            const test = userFunction(1);
+
+        if (!Number.isFinite(test)) {
+            throw new Error();
+        }
+
+        return true;
+    } catch {
+        stepInfo.textContent = "Ошибка в записи функции.";
+        result.textContent = "";
+        return false;
+    }
+}
 
 function f(x) {
-    if (funcTypeInput.value === "max") {
-        return -0.1 * (x - 3) ** 2 + 20;
+    return userFunction(x);
+}
+
+function checkUnimodality(l, r) {
+    const values = [];
+    const pointsCount = 300;
+
+    for (let i = 0; i <= pointsCount; i++) {
+        const x = l + (r - l) * i / pointsCount;
+        const y = f(x);
+
+        if (!Number.isFinite(y)) {
+            return false;
+        }
+
+        values.push(y);
     }
-    return 0.15 * (x + 3) ** 2 + 2;
+
+    let changes = 0;
+    let lastDirection = 0;
+
+    for (let i = 1; i < values.length; i++) {
+        const diff = values[i] - values[i - 1];
+
+        if (Math.abs(diff) < 1e-7) {
+            continue;
+        }
+
+        const currentDirection = diff > 0 ? 1 : -1;
+
+        if (lastDirection !== 0 && currentDirection !== lastDirection) {
+            changes++;
+        }
+
+        lastDirection = currentDirection;
+    }
+
+    return changes <= 1;
 }
 
 function handleButtonClick() {
@@ -44,6 +128,7 @@ function resetAlgorithm() {
 
 function setInputsDisabled(disabled) {
     funcTypeInput.disabled = disabled;
+    funcInput.disabled = disabled;
     leftInput.disabled = disabled;
     rightInput.disabled = disabled;
     epsInput.disabled = disabled;
@@ -52,17 +137,15 @@ function setInputsDisabled(disabled) {
 function startSearch() {
     clearInterval(timer);
 
+    if (!validateInputs()) {
+        drawBaseGraph();
+        return;
+    }
+
     let l = Number(leftInput.value);
     let r = Number(rightInput.value);
     const eps = Number(epsInput.value);
     const type = funcTypeInput.value;
-
-    if (!Number.isFinite(l) || !Number.isFinite(r) || !Number.isFinite(eps) || l >= r || eps <= 0) {
-        stepInfo.textContent = "Проверьте границы интервала и точность.";
-        result.textContent = "";
-        drawBaseGraph();
-        return;
-    }
 
     steps = [];
     currentStep = 0;
@@ -127,7 +210,9 @@ function drawStep(step) {
         stepInfo.textContent = 
         `Алгоритм завершён. Количество выполненных итераций: ${step.iteration - 1}.`;
         result.textContent =
-        `Результат: x ≈ ${step.x.toFixed(4)}, f(x) ≈ ${step.y.toFixed(4)}`;
+            `Найден ${
+                funcTypeInput.value === "max" ? "максимум" : "минимум"
+            }: x ≈ ${step.x.toFixed(4)}, f(x) ≈ ${step.y.toFixed(4)}`;
 
         return;
     }
@@ -148,18 +233,31 @@ function drawStep(step) {
 
 function drawBaseGraph() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!createUserFunction()) {
+        startButton.disabled = true;
+        return;
+    }
+
     drawAxes();
     drawFunction();
+
+    if (!algorithmRunning) {
+        validateInputs();
+    }
 }
 
 function drawAxes() {
+    const xAxisY = mathToScreenY(0);
+    const yAxisX = mathToScreenX(0);
+
     ctx.beginPath();
 
-    ctx.moveTo(60, 420);
-    ctx.lineTo(950, 420);
+    ctx.moveTo(60, xAxisY);
+    ctx.lineTo(950, xAxisY);
 
-    ctx.moveTo(500, 40);
-    ctx.lineTo(500, 450);
+    ctx.moveTo(yAxisX, 40);
+    ctx.lineTo(yAxisX, 470);
 
     ctx.strokeStyle = "black";
     ctx.lineWidth = 2;
@@ -167,8 +265,8 @@ function drawAxes() {
 
     ctx.fillStyle = "black";
     ctx.font = "20px Cascadia Mono";
-    ctx.fillText("x", 960, 425);
-    ctx.fillText("y", 508, 45);
+    ctx.fillText("x", 960, xAxisY + 5);
+    ctx.fillText("y", yAxisX + 8, 45);
 }
 
 function drawFunction() {
@@ -205,13 +303,19 @@ function drawFunction() {
 
 function drawVerticalLine(x, color, label) {
     const px = mathToScreenX(x);
-    const y = f(x);
-    const py = mathToScreenY(y);
+    const py = mathToScreenY(f(x));
+    const xAxisY = mathToScreenY(0);
 
     ctx.beginPath();
     ctx.setLineDash([6, 6]);
-    ctx.moveTo(px, 420);
-    ctx.lineTo(px, py);
+
+    ctx.moveTo(px, xAxisY);
+    if (py < xAxisY) {
+        ctx.lineTo(px, py - 10);
+    } else {
+        ctx.lineTo(px, py + 10);
+    }
+
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.stroke();
@@ -219,7 +323,19 @@ function drawVerticalLine(x, color, label) {
 
     ctx.fillStyle = color;
     ctx.font = "20px Cascadia Mono";
-    ctx.fillText(label, px - 10, 445);
+
+    const textX = px - 10;
+    let textY;
+
+    if (py < xAxisY) {
+        textY = Math.min(xAxisY - 15, py - 25);
+    } else {
+        textY = Math.max(xAxisY + 25, py + 25);
+    }
+
+    textY = Math.max(35, Math.min(490, textY));
+
+    ctx.fillText(label, textX, textY);
 }
 
 function drawAxisMark(x, label) {
@@ -260,18 +376,39 @@ function screenToMathX(px) {
 }
 
 function mathToScreenY(y) {
-    const type = funcTypeInput.value;
+    const l = Number(leftInput.value);
+    const r = Number(rightInput.value);
 
-    if (type === "max") {
-        return 420 - y * 12;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    for (let i = 0; i <= 200; i++) {
+        const x = l + (r - l) * i / 200;
+        const value = f(x);
+
+        if (Number.isFinite(value)) {
+            minY = Math.min(minY, value);
+            maxY = Math.max(maxY, value);
+        }
     }
 
-    return 420 - y * 6;
+    minY = Math.min(minY, 0);
+    maxY = Math.max(maxY, 0);
+
+    if (minY === maxY) {
+        return 260;
+    }
+
+    return 470 - ((y - minY) / (maxY - minY)) * 380;
 }
 
 funcTypeInput.addEventListener("change", drawBaseGraph);
+funcInput.addEventListener("input", drawBaseGraph);
 leftInput.addEventListener("input", drawBaseGraph);
 rightInput.addEventListener("input", drawBaseGraph);
 epsInput.addEventListener("input", drawBaseGraph);
 
-drawBaseGraph();
+document.fonts.ready.then(() => {
+    createUserFunction();
+    drawBaseGraph();
+});
